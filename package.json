@@ -1,0 +1,26 @@
+{
+  "name": "annapurna",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "mock": "tsx src/mock-swiggy/server.ts",
+    "agent": "tsx src/agent/index.ts",
+    "dev": "concurrently \"npm:mock\" \"npm:agent\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "express": "^5.2.1",
+    "node-cron": "^4.5.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.6",
+    "concurrently": "^10.0.3",
+    "tsx": "^4.22.5",
+    "typescript": "^6.0.3"
+  }
+}

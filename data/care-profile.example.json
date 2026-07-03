@@ -1,0 +1,46 @@
+{
+  "id": "mummy-delhi",
+  "parent": {
+    "name": "Madhu",
+    "addressId": "addr_parent_delhi",
+    "language": "Hindi",
+    "whatsapp": "+91XXXXXXXXXX"
+  },
+  "child": {
+    "name": "Gaurang",
+    "whatsapp": "+91YYYYYYYYYY"
+  },
+  "health": {
+    "diet": [
+      "vegetarian",
+      "diabetic"
+    ],
+    "allergens": [
+      "nuts",
+      "seafood"
+    ],
+    "softFoodOnly": false,
+    "notes": "Prefers less oil. Loves curry-based meals."
+  },
+  "schedule": {
+    "lunchTime": "13:30",
+    "daysOff": [
+      "Sunday"
+    ],
+    "budgetPerMealINR": 250
+  },
+  "delivery": {
+    "fallbackContact": "watchman Sharma ji, gate 2",
+    "instructions": "Gate 2, blue door. Please hand over personally \u2014 knock loudly."
+  },
+  "favorites": [
+    "gk_4",
+    "gj_1",
+    "gj_5",
+    "sv_5"
+  ],
+  "consent": {
+    "parentConsent": true,
+    "termsAcknowledged": true
+  }
+}

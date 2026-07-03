@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Annapurna — care from afar</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<style>
+  :root {
+    --paper: #f6f4ef; --card: #ffffff; --ink: #22271f; --muted: #6f7568;
+    --line: #e6e2d8; --green: #2f7a4d; --green-soft: #e8f2ea; --red: #b3402f; --red-soft: #f7ebe8;
+    --orange: #e8641c; --orange-deep: #c94f10; /* status strip ONLY */
+    --wa: #075e54; --wa-bg: #ece5dd;
+    --radius: 14px; --shadow: 0 1px 2px rgba(30,30,20,.05), 0 8px 24px rgba(30,30,20,.06);
+    /* hero dusk palette */
+    --dusk1: #2b2340; --dusk2: #4a3350; --dusk3: #7a4a52; --lamp: #ffd9a0;
+  }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--paper); color: var(--ink); font: 15px/1.55 Inter, system-ui, sans-serif; min-height: 100vh; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 20px 16px 56px; }
+  h1, h2, h3, .display { font-family: Fraunces, Georgia, serif; font-weight: 600; letter-spacing: -0.01em; }
+  a { color: inherit; }
+  button { font: inherit; cursor: pointer; }
+  .icon { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -3px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); padding: 20px; }
+  .muted { color: var(--muted); }
+  .row { display: flex; align-items: center; gap: 10px; }
+  .hidden { display: none !important; }
+  .btn { border: 0; border-radius: 12px; padding: 13px 18px; font-size: 15px; font-weight: 600; display: inline-flex; align-items: center; justify-content: center; gap: 9px; transition: transform .08s, background .15s, border-color .15s; }
+  .btn:active { transform: scale(.99); }
+  .btn.primary { background: var(--green); color: #fff; }
+  .btn.primary:hover { background: #276941; }
+  .btn.primary:disabled { background: #9db8a6; cursor: default; }
+  .btn.ghost { background: transparent; border: 1.5px solid var(--line); color: var(--ink); }
+  .btn.ghost:hover { border-color: #b9b2a0; }
+  .btn:focus-visible, a:focus-visible, .chip-btn:focus-visible { outline: 3px solid #a7cdb4; outline-offset: 2px; }
+  input[type=text], input[type=tel], input[type=time], input[type=date], input[type=number], textarea, select {
+    width: 100%; font: inherit; color: var(--ink); background: #fbfaf7; border: 1.5px solid var(--line);
+    border-radius: 10px; padding: 11px 13px;
+  }
+  input:focus, textarea:focus, select:focus { outline: none; border-color: var(--green); }
+  label.fld { display: grid; gap: 6px; font-size: 13px; font-weight: 600; color: var(--muted); }
+  .err { border: 1px solid #e5c4bc; background: var(--red-soft); color: var(--red); border-radius: 12px; padding: 13px 15px; font-size: 13.5px; display: flex; gap: 10px; align-items: flex-start; }
+  .skel { border-radius: 10px; background: linear-gradient(90deg,#eee9df 25%,#f5f1e8 50%,#eee9df 75%); background-size: 200% 100%; animation: shimmer 1.3s infinite; }
+  @keyframes shimmer { to { background-position: -200% 0; } }
+  .spinner { width: 15px; height: 15px; border: 2px solid rgba(255,255,255,.4); border-top-color: #fff; border-radius: 50%; animation: spin .8s linear infinite; flex: none; }
+  .spinner.dark { border-color: var(--line); border-top-color: var(--green); }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* ================= HERO — original scene: steaming bowl at dusk ================= */
+  .hero { position: relative; border-radius: 20px; overflow: hidden; box-shadow: var(--shadow); background: linear-gradient(180deg, var(--dusk1) 0%, var(--dusk2) 52%, var(--dusk3) 100%); }
+  .hero svg.scene { display: block; width: 100%; height: auto; }
+  .hero-overlay { position: absolute; inset: 0; display: flex; flex-direction: column; justify-content: flex-start; padding: clamp(20px, 4vw, 44px); pointer-events: none; }
+  .hero-overlay > * { pointer-events: auto; }
+  .hero .wordmark { color: #fff7ec; font-family: Fraunces, serif; font-size: clamp(26px, 4.5vw, 40px); font-weight: 600; text-shadow: 0 2px 18px rgba(0,0,0,.35); }
+  .hero .wordmark span { color: var(--lamp); }
+  .hero .sub { color: rgba(255,247,236,.85); font-size: clamp(13px, 1.8vw, 15.5px); max-width: 430px; margin-top: 8px; text-shadow: 0 1px 10px rgba(0,0,0,.3); }
+  .steam { transform-origin: center bottom; animation: rise 5.5s ease-in-out infinite; opacity: 0; }
+  .steam.s2 { animation-delay: 1.8s; animation-duration: 6.5s; }
+  .steam.s3 { animation-delay: 3.4s; animation-duration: 6s; }
+  @keyframes rise {
+    0% { transform: translateY(14px) scaleX(1); opacity: 0; }
+    18% { opacity: .75; }
+    60% { opacity: .45; }
+    100% { transform: translateY(-58px) scaleX(1.35); opacity: 0; }
+  }
+  .flicker { animation: flick 3.2s ease-in-out infinite; }
+  @keyframes flick { 0%,100% { opacity: .85; } 50% { opacity: 1; } }
+  .hero-strip { border-radius: 16px; }
+  .hero-strip svg.scene { max-height: 150px; object-fit: cover; }
+
+  .signin-card { margin: -46px 16px 0; position: relative; z-index: 2; background: var(--card); border: 1px solid var(--line); border-radius: 16px; box-shadow: var(--shadow); padding: 22px; display: grid; gap: 12px; }
+  @media (min-width: 700px) { .signin-card { max-width: 460px; margin: -56px auto 0; } }
+  .swiggy-btn { background: var(--orange); color: #fff; } /* the sign-in button is Swiggy's own brand moment */
+  .swiggy-btn:hover { background: var(--orange-deep); }
+  .oauth-steps { display: grid; gap: 8px; font-size: 13px; }
+  .oauth-steps .st { display: flex; gap: 9px; align-items: center; color: var(--muted); }
+  .oauth-steps .st.done { color: var(--ink); }
+  .oauth-steps .st.active { color: var(--green); font-weight: 600; }
+  .tiny { font-size: 11.5px; color: var(--muted); line-height: 1.5; }
+
+  /* ================= Wizard ================= */
+  .wiz-head { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 0 14px; }
+  .wiz-steps { display: flex; gap: 6px; }
+  .wiz-dot { width: 26px; height: 5px; border-radius: 3px; background: var(--line); }
+  .wiz-dot.on { background: var(--green); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip-btn { border: 1.5px solid var(--line); background: #fbfaf7; color: var(--ink); border-radius: 99px; padding: 8px 15px; font-size: 13.5px; font-weight: 500; display: inline-flex; gap: 7px; align-items: center; transition: all .12s; }
+  .chip-btn[aria-pressed="true"] { background: var(--green-soft); border-color: var(--green); color: var(--green); }
+  .chip-btn.blockable[aria-pressed="true"] { background: var(--red-soft); border-color: var(--red); color: var(--red); }
+  .grid2 { display: grid; gap: 14px; }
+  @media (min-width: 640px) { .grid2 { grid-template-columns: 1fr 1fr; } }
+  .wiz-nav { display: flex; justify-content: space-between; margin-top: 18px; }
+  .dish-group { margin-top: 14px; }
+  .dish-group h3 { font-size: 15px; display: flex; align-items: center; gap: 7px; }
+  .via { font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: var(--muted); border: 1px solid var(--line); border-radius: 99px; padding: 3px 9px; }
+  .dish-list { display: grid; gap: 8px; margin-top: 9px; }
+  @media (min-width: 640px) { .dish-list { grid-template-columns: 1fr 1fr; } }
+  .dish { display: flex; gap: 10px; align-items: center; border: 1.5px solid var(--line); border-radius: 12px; padding: 11px 13px; background: #fbfaf7; cursor: pointer; transition: all .12s; }
+  .dish[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); }
+  .dish .veg-mark { margin: 0; }
+  .dish .dn { font-weight: 600; font-size: 13.5px; line-height: 1.3; }
+  .dish .dp { font-size: 12px; color: var(--muted); }
+  .dish .tick { margin-left: auto; color: var(--green); opacity: 0; }
+  .dish[aria-pressed="true"] .tick { opacity: 1; }
+  .count-note { font-size: 13px; color: var(--muted); margin-top: 10px; display: flex; gap: 7px; align-items: center; }
+  .consents { display: grid; gap: 10px; font-size: 13.5px; }
+  .consents label { display: flex; gap: 10px; align-items: flex-start; cursor: pointer; font-weight: 500; }
+  .consents input { width: auto; margin-top: 2px; }
+
+  /* ================= Home ================= */
+  .home-grid { display: grid; gap: 16px; margin-top: 16px; }
+  .parent-head { display: flex; gap: 14px; align-items: center; }
+  .avatar { width: 52px; height: 52px; border-radius: 50%; background: var(--green-soft); color: var(--green); display: grid; place-items: center; font-family: Fraunces, serif; font-size: 22px; font-weight: 600; }
+  .parent-name { font-family: Fraunces, serif; font-size: 20px; font-weight: 600; }
+  .addr { font-size: 13px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 500; padding: 5px 11px; border-radius: 99px; background: var(--green-soft); color: var(--green); }
+  .chip.block { background: var(--red-soft); color: var(--red); }
+  .actions { display: grid; gap: 12px; }
+  @media (min-width: 700px) { .actions { grid-template-columns: 1fr 1fr 1fr; } }
+  .action-card { display: grid; gap: 8px; text-align: left; background: var(--card); border: 1.5px solid var(--line); border-radius: var(--radius); padding: 17px; transition: border-color .15s, transform .08s; }
+  .action-card:hover { border-color: var(--green); }
+  .action-card:active { transform: scale(.99); }
+  .action-card .ai { width: 38px; height: 38px; border-radius: 10px; background: var(--green-soft); color: var(--green); display: grid; place-items: center; }
+  .action-card .at { font-weight: 600; font-size: 15px; }
+  .action-card .ad { font-size: 12.5px; color: var(--muted); }
+  .progress { display: grid; gap: 9px; }
+  .pstep { display: flex; gap: 9px; align-items: center; font-size: 13.5px; color: var(--muted); }
+  .pstep.done { color: var(--ink); }
+  .pstep.active { color: var(--green); font-weight: 600; }
+  .section-title { display: flex; align-items: center; gap: 8px; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .history { display: grid; gap: 10px; margin-top: 10px; }
+  .h-item { display: flex; gap: 12px; align-items: center; padding: 13px 15px; background: var(--card); border: 1px solid var(--line); border-radius: 12px; text-decoration: none; transition: border-color .15s; }
+  .h-item:hover { border-color: #c8c2b2; }
+  .h-icon { width: 34px; height: 34px; border-radius: 9px; background: var(--paper); border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); }
+  .h-dish { font-weight: 600; font-size: 14px; }
+  .h-sub { font-size: 12px; color: var(--muted); }
+  .h-amt { margin-left: auto; font-weight: 600; white-space: nowrap; }
+  .empty { text-align: center; padding: 26px 16px; color: var(--muted); font-size: 14px; display: grid; gap: 8px; justify-items: center; }
+  footer.terms { margin-top: 34px; font-size: 11.5px; color: var(--muted); text-align: center; line-height: 1.6; }
+
+  /* ================= Modals ================= */
+  .modal-bg { position: fixed; inset: 0; background: rgba(25,28,22,.45); display: grid; place-items: center; padding: 16px; z-index: 50; }
+  .modal { background: var(--card); border-radius: 16px; box-shadow: var(--shadow); width: min(560px, 100%); max-height: 88vh; overflow-y: auto; padding: 22px; display: grid; gap: 14px; }
+  .modal h2 { font-size: 19px; display: flex; align-items: center; gap: 9px; }
+  .g-item { display: flex; gap: 11px; align-items: center; border: 1.5px solid var(--line); border-radius: 12px; padding: 10px 13px; background: #fbfaf7; cursor: pointer; }
+  .g-item[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); }
+  .g-item .gn { font-weight: 600; font-size: 13.5px; }
+  .g-item .gp { font-size: 12px; color: var(--muted); }
+  .g-note { font-size: 11px; color: var(--red); }
+  .g-total { display: flex; justify-content: space-between; font-weight: 600; padding-top: 6px; border-top: 1px solid var(--line); }
+  .slot { border: 1.5px solid var(--line); background: #fbfaf7; border-radius: 9px; padding: 8px 13px; font-weight: 600; font-size: 13.5px; }
+  .slot[aria-pressed="true"] { border-color: var(--green); background: var(--green-soft); color: var(--green); }
+
+  /* ================= Tracking ================= */
+  .back { display: inline-flex; align-items: center; gap: 6px; font-size: 13.5px; text-decoration: none; color: var(--muted); margin: 4px 0 14px; }
+  .back:hover { color: var(--ink); }
+  .headline { font-size: clamp(21px, 4vw, 27px); line-height: 1.25; margin-bottom: 16px; font-family: Fraunces, serif; font-weight: 600; }
+  .headline .accent { color: var(--green); }
+  .strip { background: linear-gradient(135deg, var(--orange), var(--orange-deep)); border-radius: var(--radius); padding: 20px 18px 16px; color: #fff; box-shadow: var(--shadow); }
+  .timeline { display: flex; }
+  .stage { flex: 1; text-align: center; position: relative; padding-top: 20px; font-size: 10.5px; letter-spacing: .07em; text-transform: uppercase; color: rgba(255,255,255,.55); }
+  .stage::before { content: ""; position: absolute; top: 0; left: 50%; transform: translateX(-50%); width: 11px; height: 11px; border-radius: 50%; background: rgba(255,255,255,.3); }
+  .stage::after { content: ""; position: absolute; top: 4.5px; left: calc(50% + 9px); right: calc(-50% + 9px); height: 2.5px; background: rgba(255,255,255,.25); }
+  .stage:last-child::after { display: none; }
+  .stage.done { color: #fff; }
+  .stage.done::before { background: #fff; box-shadow: 0 0 0 3px rgba(255,255,255,.25); }
+  .stage.done::after { background: rgba(255,255,255,.85); }
+  .stage .ts { display: block; font-size: 10px; letter-spacing: 0; text-transform: none; margin-top: 3px; color: rgba(255,255,255,.75); }
+  .track-grid { display: grid; gap: 16px; margin-top: 16px; }
+  @media (min-width: 860px) { .track-grid { grid-template-columns: 1.15fr .85fr; align-items: start; } }
+  .col { display: grid; gap: 16px; }
+  .dish-row { display: flex; gap: 12px; align-items: flex-start; justify-content: space-between; }
+  .veg-mark { width: 16px; height: 16px; border: 1.5px solid var(--green); border-radius: 3px; display: grid; place-items: center; margin-top: 4px; flex: none; }
+  .veg-mark::after { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--green); }
+  .dish-name { font-family: Fraunces, serif; font-size: 19px; font-weight: 600; line-height: 1.3; }
+  .rest-line { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 5px; margin-top: 3px; }
+  .star { width: 13px; height: 13px; fill: var(--green); stroke: none; }
+  .eta { text-align: right; white-space: nowrap; }
+  .eta .big { font-family: Fraunces, serif; font-size: 19px; font-weight: 600; }
+  .eta .lbl { font-size: 11.5px; color: var(--muted); }
+  .why { font-size: 13.5px; background: var(--paper); border: 1px solid var(--line); border-radius: 10px; padding: 10px 13px; display: flex; gap: 9px; align-items: flex-start; margin-top: 12px; }
+  .why .icon { color: var(--green); margin-top: 1px; }
+  .safety { display: grid; gap: 9px; }
+  .s-item { display: flex; gap: 10px; align-items: flex-start; font-size: 13.5px; padding: 9px 12px; border-radius: 10px; }
+  .s-item.pass { background: var(--green-soft); color: #245c3b; }
+  .s-item.fail { background: var(--red-soft); color: var(--red); }
+  .s-item .icon { margin-top: 1px; }
+  .de-card { display: flex; align-items: center; gap: 14px; }
+  .de-ava { width: 44px; height: 44px; border-radius: 50%; background: var(--paper); border: 1px solid var(--line); display: grid; place-items: center; color: var(--muted); }
+  .de-name { font-weight: 600; font-size: 15.5px; }
+  .de-sub { font-size: 12.5px; color: var(--muted); }
+  .badge { margin-left: auto; font-size: 10.5px; letter-spacing: .08em; text-transform: uppercase; color: var(--green); border: 1px solid #bcd8c5; padding: 4px 10px; border-radius: 99px; white-space: nowrap; }
+  .pay { display: flex; justify-content: space-between; align-items: center; }
+  .pay .amt { font-family: Fraunces, serif; font-size: 22px; font-weight: 600; }
+  #map { height: 260px; border-radius: var(--radius); border: 1px solid var(--line); z-index: 0; }
+  .map-fallback { height: 120px; display: grid; place-items: center; color: var(--muted); font-size: 13.5px; }
+  .phone { border: 1px solid var(--line); border-radius: 22px; overflow: hidden; background: var(--wa-bg); box-shadow: var(--shadow); }
+  .wa-head { background: var(--wa); color: #fff; padding: 11px 14px; display: flex; align-items: center; gap: 10px; }
+  .wa-ava { width: 32px; height: 32px; border-radius: 50%; background: rgba(255,255,255,.2); display: grid; place-items: center; font-size: 14px; font-weight: 600; }
+  .wa-name { font-weight: 600; font-size: 14px; }
+  .wa-sub { font-size: 11px; opacity: .8; }
+  .wa-body { padding: 12px; display: grid; gap: 8px; max-height: 360px; overflow-y: auto; }
+  .bubble { background: #fff; border-radius: 10px; border-top-left-radius: 2px; padding: 8px 11px; font-size: 13px; line-height: 1.45; max-width: 88%; box-shadow: 0 1px 1px rgba(0,0,0,.08); white-space: pre-line; animation: pop .25s ease; }
+  .bubble .wa-ts { display: block; text-align: right; font-size: 10px; color: #8a9188; margin-top: 3px; }
+  @keyframes pop { from { transform: translateY(6px); opacity: 0; } }
+  .wa-empty { font-size: 12.5px; color: #6d746b; text-align: center; padding: 18px 8px; }
+  .done-banner { background: var(--green-soft); border: 1px solid #bcd8c5; color: #245c3b; border-radius: var(--radius); padding: 16px 18px; display: flex; gap: 12px; align-items: center; font-size: 14.5px; margin-bottom: 16px; }
+  .done-banner .icon { width: 22px; height: 22px; color: var(--green); }
+  .done-banner b { font-family: Fraunces, serif; font-size: 16px; }
+  .booking-card { display: grid; gap: 8px; }
+  .booking-big { font-family: Fraunces, serif; font-size: 24px; font-weight: 600; letter-spacing: .04em; }
+
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap" id="app"></div>
+
+<!-- ================= Templates ================= -->
+
+<template id="tpl-hero">
+  <div class="hero">
+    <svg class="scene" viewBox="0 0 1200 430" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A steaming bowl of ramen on a wooden table at dusk">
+      <defs>
+        <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#2b2340"/><stop offset=".55" stop-color="#4a3350"/><stop offset="1" stop-color="#7a4a52"/>
+        </linearGradient>
+        <linearGradient id="table" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#8a5a38"/><stop offset="1" stop-color="#6d4327"/>
+        </linearGradient>
+        <radialGradient id="lampGlow" cx="50%" cy="40%" r="60%">
+          <stop offset="0" stop-color="#ffd9a0" stop-opacity=".55"/><stop offset="1" stop-color="#ffd9a0" stop-opacity="0"/>
+        </radialGradient>
+        <linearGradient id="broth" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#e8a34c"/><stop offset="1" stop-color="#c97c2e"/>
+        </linearGradient>
+        <linearGradient id="bowlG" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stop-color="#3b4a63"/><stop offset="1" stop-color="#26324a"/>
+        </linearGradient>
+        <filter id="soft"><feGaussianBlur stdDeviation="5"/></filter>
+      </defs>
+
+      <!-- dusk sky + city hint -->
+      <rect width="1200" height="430" fill="url(#sky)"/>
+      <g opacity=".28" fill="#1d1832">
+        <rect x="60" y="118" width="60" height="130"/><rect x="140" y="86" width="44" height="162"/>
+        <rect x="980" y="100" width="70" height="148"/><rect x="1070" y="132" width="52" height="116"/>
+      </g>
+      <g fill="#ffd9a0" opacity=".5">
+        <rect x="72" y="132" width="7" height="7"/><rect x="94" y="156" width="7" height="7"/><rect x="150" y="104" width="7" height="7"/>
+        <rect x="994" y="118" width="7" height="7"/><rect x="1016" y="150" width="7" height="7"/><rect x="1082" y="150" width="7" height="7"/>
+      </g>
+      <circle cx="885" cy="72" r="26" fill="#f4e6c8" opacity=".9"/>
+      <circle cx="876" cy="66" r="7" fill="#e3d2ae" opacity=".6"/><circle cx="896" cy="80" r="5" fill="#e3d2ae" opacity=".5"/>
+
+      <!-- hanging lamp -->
+      <g class="flicker">
+        <rect x="598" y="0" width="4" height="66" fill="#1c1730"/>
+        <path d="M566 66h68l-12 26h-44z" fill="#c9542a"/>
+        <ellipse cx="600" cy="96" rx="16" ry="8" fill="#ffd9a0"/>
+        <ellipse cx="600" cy="150" rx="240" ry="120" fill="url(#lampGlow)"/>
+      </g>
+
+      <!-- table -->
+      <rect x="0" y="300" width="1200" height="130" fill="url(#table)"/>
+      <g stroke="#5e3a20" stroke-width="2" opacity=".5">
+        <line x1="0" y1="330" x2="1200" y2="330"/><line x1="0" y1="368" x2="1200" y2="368"/><line x1="0" y1="404" x2="1200" y2="404"/>
+      </g>
+
+      <!-- cloth + chai on the side -->
+      <rect x="806" y="292" width="120" height="26" rx="4" fill="#b8443a"/>
+      <rect x="806" y="292" width="120" height="26" rx="4" fill="none" stroke="#8f312c" stroke-width="2" opacity=".6"/>
+      <g>
+        <path d="M852 258c0 0-4 26 14 30h20c18-4 14-30 14-30z" fill="#e8ddca"/>
+        <path d="M900 262c10 0 14 10 6 16-4 3-8 3-8 3" fill="none" stroke="#e8ddca" stroke-width="5"/>
+        <ellipse cx="876" cy="258" rx="24" ry="5" fill="#b9832f"/>
+      </g>
+
+      <!-- bowl shadow -->
+      <ellipse cx="600" cy="352" rx="190" ry="26" fill="#3f2413" opacity=".55" filter="url(#soft)"/>
+
+      <!-- ramen bowl -->
+      <g>
+        <path d="M448 268c0 66 62 96 152 96s152-30 152-96z" fill="url(#bowlG)"/>
+        <path d="M448 268h304c0 10-6 16-14 18H462c-8-2-14-8-14-18z" fill="#1d2740"/>
+        <rect x="560" y="356" width="80" height="12" rx="4" fill="#1d2740"/>
+        <ellipse cx="600" cy="268" rx="152" ry="30" fill="url(#broth)"/>
+        <!-- noodle swirl -->
+        <g stroke="#f2d38a" stroke-width="5" fill="none" opacity=".95" stroke-linecap="round">
+          <path d="M492 268c22-12 52-14 70-4"/>
+          <path d="M498 276c30-14 66-16 88-2"/>
+          <path d="M512 262c18-10 40-10 56-2"/>
+        </g>
+        <!-- soft-boiled egg -->
+        <ellipse cx="668" cy="258" rx="26" ry="17" fill="#f7ecd7"/>
+        <circle cx="674" cy="256" r="8" fill="#e8a53c"/>
+        <!-- greens + naruto -->
+        <g fill="#5f8f4e">
+          <path d="M560 246c8-10 20-12 28-8-4 10-16 16-28 8z"/>
+          <path d="M586 240c6-8 16-10 22-6-3 8-12 12-22 6z"/>
+        </g>
+        <circle cx="536" cy="256" r="13" fill="#fff"/>
+        <path d="M530 250c6 4 8 8 4 12" stroke="#e0644e" stroke-width="3.5" fill="none"/>
+        <!-- chilli oil drops -->
+        <g fill="#c9542a" opacity=".8"><circle cx="620" cy="278" r="3"/><circle cx="600" cy="284" r="2.5"/><circle cx="646" cy="280" r="3"/></g>
+        <!-- chopsticks resting -->
+        <g stroke="#d9b06a" stroke-width="6" stroke-linecap="round">
+          <line x1="700" y1="212" x2="806" y2="252"/>
+          <line x1="706" y1="222" x2="810" y2="258"/>
+        </g>
+      </g>
+
+      <!-- steam wisps (animated) -->
+      <g stroke="#fff" stroke-width="9" fill="none" stroke-linecap="round" opacity=".85" filter="url(#soft)">
+        <path class="steam" d="M556 236c-10-18 8-26-2-44 8-14-4-22-2-34"/>
+        <path class="steam s2" d="M604 230c10-18-8-28 2-46-8-14 4-22 2-34"/>
+        <path class="steam s3" d="M652 236c-8-16 10-26 0-44 8-12-4-20-2-32"/>
+      </g>
+    </svg>
+    <div class="hero-overlay">
+      <div class="wordmark">Annapurna<span>.</span></div>
+      <div class="sub">Feed your parents from 2,000 km away. One tap sends a safe, doctor-friendly meal — she never touches an app.</div>
+    </div>
+  </div>
+</template>
+
+<!-- Icon sprite (stroke icons, no emojis) -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2L11 13"/><path d="M22 2l-7 20-4-9-9-4z"/></symbol>
+  <symbol id="i-pin" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13S3 17 3 10a9 9 0 1 1 18 0z"/><circle cx="12" cy="10" r="3"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5"/><path d="M12 7v5l3 3"/></symbol>
+  <symbol id="i-back" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></symbol>
+  <symbol id="i-check-circle" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M8 12l3 3 5-6"/></symbol>
+  <symbol id="i-x-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9.5 9.5l5 5M14.5 9.5l-5 5"/></symbol>
+  <symbol id="i-shield" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-bike" viewBox="0 0 24 24"><circle cx="5.5" cy="17.5" r="3.5"/><circle cx="18.5" cy="17.5" r="3.5"/><path d="M15 6h3l-4 6h-5l-2 5.5"/><path d="M12 12l3 5.5"/><circle cx="15" cy="5" r="1"/></symbol>
+  <symbol id="i-sparkle" viewBox="0 0 24 24"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/><path d="M12 9v4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-leaf" viewBox="0 0 24 24"><path d="M11 20A7 7 0 0 1 4 13c0-5 4-9 16-10-1 12-5 16-9 17z"/><path d="M4 21c3-3 6-5 10-6"/></symbol>
+  <symbol id="i-heart-pulse" viewBox="0 0 24 24"><path d="M19.5 12.6L12 20l-7.5-7.4A5 5 0 1 1 12 6.3a5 5 0 1 1 7.5 6.3z"/><path d="M3.5 12h4l1.5-3 3 6 1.5-3h4"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M5.5 5.5l13 13"/></symbol>
+  <symbol id="i-bowl" viewBox="0 0 24 24"><path d="M4 11h16a8 8 0 0 1-16 0z"/><path d="M9 11c0-3 1-5 3-7M14 11c0-2 .5-4 2-5"/></symbol>
+  <symbol id="i-basket" viewBox="0 0 24 24"><path d="M5 9h14l-1.5 11h-11z"/><path d="M8 9l3-6M16 9l-3-6"/><path d="M9 13v4M12 13v4M15 13v4"/></symbol>
+  <symbol id="i-table" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M4 21c0-4 3.5-7 8-7s8 3 8 7"/></symbol>
+  <symbol id="i-swiggy" viewBox="0 0 24 24"><path d="M12 2a8 8 0 0 1 8 8c0 6-8 12-8 12S4 16 4 10a8 8 0 0 1 8-8z"/><path d="M9 9.5c0-1.5 1.3-2.5 3-2.5s3 1 3 2.5-1.3 2.5-3 2.5"/><path d="M12 12v3"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+</svg>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+"use strict";
+const app = document.getElementById("app");
+const orderId = new URLSearchParams(location.search).get("order");
+const $ = (id) => document.getElementById(id);
+const ic = (name, size=18, style="") => `<svg class="icon" style="width:${size}px;height:${size}px;${style}"><use href="#${name}"/></svg>`;
+const fmtTime = (ms) => new Date(ms).toLocaleTimeString("en-IN", { hour: "numeric", minute: "2-digit" });
+const escapeHtml = (t) => String(t).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const heroHtml = (strip=false) => {
+  const t = document.getElementById("tpl-hero").content.cloneNode(true);
+  const d = document.createElement("div");
+  d.appendChild(t);
+  if (strip) { d.querySelector(".hero").classList.add("hero-strip"); d.querySelector(".sub").remove(); }
+  return d.innerHTML;
+};
+const TERMS_FOOTER = `<footer class="terms">${ic("i-lock",13)} Built on the <b>Swiggy MCP platform</b> (Builders Club prototype). We acknowledge and operate within the Swiggy MCP Terms of Use: user-consented actions only, no scraping, no data resale, Swiggy branding preserved. Payments settle on your Swiggy account via OAuth — this app never sees card details. Profile data stays on this device (DPDP-aligned data minimisation).</footer>`;
+
+/* ======================= ROUTER ======================= */
+async function boot() {
+  if (orderId) return renderTrack();
+  const authed = sessionStorage.getItem("annapurna_session");
+  if (!authed) return renderSignin();
+  try {
+    const res = await fetch("/api/profile/current");
+    if (res.status === 404) return renderWizard();
+    if (!res.ok) throw new Error();
+    renderHome(await res.json());
+  } catch {
+    renderAgentDown();
+  }
+}
+
+function renderAgentDown() {
+  app.innerHTML = heroHtml() + `<div class="card err" style="margin-top:16px">${ic("i-alert")}<div><b>Can't reach the Annapurna agent.</b><br/>Start it with <code>npm run agent</code> (and <code>npm run mock</code>), then refresh.</div></div>`;
+}
+
+/* ======================= SIGN-IN (Swiggy OAuth showcase) ======================= */
+function renderSignin() {
+  app.innerHTML = heroHtml() + `
+    <div class="signin-card">
+      <button class="btn swiggy-btn" id="swiggyBtn">${ic("i-swiggy",20)} Continue with Swiggy</button>
+      <div class="oauth-steps hidden" id="oauthSteps"></div>
+      <div class="tiny">Sign-in happens on Swiggy — OAuth 2.1 with PKCE. Annapurna receives a scoped token (order food & groceries, book tables, read addresses) and <b>never your password or payment details</b>. This is a working showcase of the production flow.</div>
+    </div>` + TERMS_FOOTER;
+  $("swiggyBtn").onclick = doSignin;
+}
+
+async function doSignin() {
+  const btn = $("swiggyBtn"), steps = $("oauthSteps");
+  btn.disabled = true;
+  btn.innerHTML = `<span class="spinner"></span> Connecting to Swiggy…`;
+  steps.classList.remove("hidden");
+  const labels = ["Redirecting to Swiggy (PKCE S256 challenge)", "You approve scopes on Swiggy's consent screen", "Authorization code exchanged for token", "Signed in — every MCP call now carries your Swiggy identity"];
+  let i = 0;
+  const draw = () => steps.innerHTML = labels.map((l, j) =>
+    `<div class="st ${j < i ? "done" : j === i ? "active" : ""}">${j < i ? ic("i-check",14,"color:var(--green)") : j === i ? '<span class="spinner dark"></span>' : ic("i-clock",14,"opacity:.35")} ${l}</div>`).join("");
+  draw();
+  const tick = setInterval(() => { if (i < labels.length - 1) { i++; draw(); } }, 650);
+  try {
+    const res = await fetch("/api/signin/swiggy", { method: "POST" });
+    const data = await res.json();
+    clearInterval(tick); i = labels.length; draw();
+    sessionStorage.setItem("annapurna_session", JSON.stringify(data.session));
+    setTimeout(boot, 500);
+  } catch {
+    clearInterval(tick);
+    steps.innerHTML = `<div class="err">${ic("i-alert")}<div>Sign-in failed — is the agent running?</div></div>`;
+    btn.disabled = false; btn.innerHTML = `${ic("i-swiggy",20)} Continue with Swiggy`;
+  }
+}
+
+/* ======================= WIZARD ======================= */
+const wiz = {
+  step: 0,
+  opts: null,
+  addresses: [],
+  data: {
+    parentName: "", language: "Hindi", parentWa: "", addressId: "",
+    childName: "", childWa: "",
+    diet: ["vegetarian"], allergens: [], softFoodOnly: false, notes: "",
+    lunchTime: "13:00", daysOff: [], budget: 250,
+    fallbackContact: "", instructions: "",
+    favorites: [], parentConsent: false, termsAcknowledged: false,
+  },
+  dishGroups: null,
+};
+
+async function renderWizard() {
+  if (!wiz.opts) {
+    try {
+      wiz.opts = await (await fetch("/api/options")).json();
+      wiz.addresses = (await (await fetch("/api/addresses")).json()).addresses ?? [];
+      if (!wiz.data.addressId && wiz.addresses[0]) wiz.data.addressId = wiz.addresses[0].id;
+    } catch { return renderAgentDown(); }
+  }
+  const titles = ["Who are we caring for?", "Her health profile", "Schedule & budget", "Delivery instructions", "Pick her dishes", "Consent & confirm"];
+  app.innerHTML = heroHtml(true) + `
+    <div class="wiz-head">
+      <h2 style="font-size:20px">${titles[wiz.step]}</h2>
+      <div class="wiz-steps">${titles.map((_, j) => `<span class="wiz-dot ${j <= wiz.step ? "on" : ""}"></span>`).join("")}</div>
+    </div>
+    <div class="card" id="wizBody"></div>
+    <div class="wiz-nav">
+      <button class="btn ghost" id="wizBack" ${wiz.step === 0 ? "disabled style='visibility:hidden'" : ""}>${ic("i-back",15)} Back</button>
+      <button class="btn primary" id="wizNext">Continue</button>
+    </div>` + TERMS_FOOTER;
+  $("wizBack").onclick = () => { wiz.step--; renderWizard(); };
+  $("wizNext").onclick = wizNext;
+  drawWizStep();
+}
+
+const chipToggle = (list, value) => {
+  const i = list.indexOf(value);
+  if (i >= 0) list.splice(i, 1); else list.push(value);
+};
+
+function drawWizStep() {
+  const b = $("wizBody"), d = wiz.data;
+  if (wiz.step === 0) {
+    b.innerHTML = `<div class="grid2">
+      <label class="fld">Parent's name<input type="text" id="f-pname" maxlength="40" placeholder="e.g. Madhu" value="${escapeHtml(d.parentName)}"></label>
+      <label class="fld">Language she speaks<select id="f-lang">${wiz.opts.languages.map(l => `<option ${l === d.language ? "selected" : ""}>${l}</option>`).join("")}</select></label>
+      <label class="fld">Her WhatsApp number<input type="tel" id="f-pwa" maxlength="16" placeholder="+91XXXXXXXXXX" value="${escapeHtml(d.parentWa)}"></label>
+      <label class="fld">Deliver to (from your Swiggy account)<select id="f-addr">${wiz.addresses.map(a => `<option value="${a.id}" ${a.id === d.addressId ? "selected" : ""}>${escapeHtml(a.label)} — ${escapeHtml(a.line1)}</option>`).join("")}</select></label>
+      <label class="fld">Your name<input type="text" id="f-cname" maxlength="40" placeholder="e.g. Gaurang" value="${escapeHtml(d.childName)}"></label>
+      <label class="fld">Your WhatsApp number<input type="tel" id="f-cwa" maxlength="16" placeholder="+91YYYYYYYYYY" value="${escapeHtml(d.childWa)}"></label>
+    </div>`;
+  }
+  if (wiz.step === 1) {
+    b.innerHTML = `
+      <div class="fld" style="font-size:13px;font-weight:600;color:var(--muted)">Diet — pick all that apply</div>
+      <div class="chips" style="margin:8px 0 16px" id="dietChips">${wiz.opts.diets.map(x =>
+        `<button class="chip-btn" data-v="${x}" aria-pressed="${d.diet.includes(x)}">${ic("i-leaf",13)} ${x.replace("-", " ")}</button>`).join("")}</div>
+      <div class="fld" style="font-size:13px;font-weight:600;color:var(--muted)">Allergies — these become hard blocks the agent can never cross</div>
+      <div class="chips" style="margin:8px 0 16px" id="allChips">${wiz.opts.allergens.map(x =>
+        `<button class="chip-btn blockable" data-v="${x}" aria-pressed="${d.allergens.includes(x)}">${ic("i-ban",13)} ${x}</button>`).join("")}</div>
+      <div class="chips" style="margin-bottom:16px"><button class="chip-btn" id="softChip" aria-pressed="${d.softFoodOnly}">${ic("i-heart-pulse",13)} soft food only (recovery)</button></div>
+      <label class="fld">Notes for the agent<textarea id="f-notes" rows="2" maxlength="240" placeholder="Prefers less oil. Loves dal-based meals.">${escapeHtml(d.notes)}</textarea></label>`;
+    $("dietChips").querySelectorAll("button").forEach(x => x.onclick = () => { chipToggle(d.diet, x.dataset.v); drawWizStep(); });
+    $("allChips").querySelectorAll("button").forEach(x => x.onclick = () => { chipToggle(d.allergens, x.dataset.v); drawWizStep(); });
+    $("softChip").onclick = () => { d.softFoodOnly = !d.softFoodOnly; drawWizStep(); };
+  }
+  if (wiz.step === 2) {
+    b.innerHTML = `<div class="grid2">
+      <label class="fld">Lunch delivery time<input type="time" id="f-time" value="${d.lunchTime}"></label>
+      <label class="fld">Budget per meal (₹)<input type="number" id="f-budget" min="50" max="2000" value="${d.budget}"></label>
+    </div>
+    <div class="fld" style="font-size:13px;font-weight:600;color:var(--muted);margin-top:14px">Days her cook comes (skip cooked food)</div>
+    <div class="chips" style="margin-top:8px" id="dayChips">${wiz.opts.days.map(x =>
+      `<button class="chip-btn" data-v="${x}" aria-pressed="${d.daysOff.includes(x)}">${x.slice(0,3)}</button>`).join("")}</div>`;
+    $("dayChips").querySelectorAll("button").forEach(x => x.onclick = () => { chipToggle(d.daysOff, x.dataset.v); drawWizStep(); });
+  }
+  if (wiz.step === 3) {
+    b.innerHTML = `
+      <label class="fld">Standing instructions for every delivery<textarea id="f-instr" rows="3" maxlength="280" placeholder="e.g. Gate 2, blue door. Please hand over personally, she is hard of hearing — knock loudly.">${escapeHtml(d.instructions)}</textarea></label>
+      <label class="fld" style="margin-top:14px">Fallback contact if she doesn't answer<input type="text" id="f-fallback" maxlength="80" placeholder="e.g. watchman Sharma ji, gate 2" value="${escapeHtml(d.fallbackContact)}"></label>
+      <div class="why" style="margin-top:16px">${ic("i-shield")}<div>These ride on <b>every</b> order automatically, along with our standard care lines: ring twice, speak ${escapeHtml(d.language)}, and <b>never ask her for OTP or money</b>.</div></div>`;
+  }
+  if (wiz.step === 4) {
+    b.innerHTML = `<div class="row" style="justify-content:center;padding:20px"><span class="spinner dark"></span><span class="muted">Fetching dishes that pass her safety profile…</span></div>`;
+    loadDishOptions();
+  }
+  if (wiz.step === 5) {
+    const favCount = d.favorites.length;
+    b.innerHTML = `
+      <div class="why" style="margin:0 0 16px">${ic("i-sparkle")}<div><b>${escapeHtml(d.parentName || "Her")}'s care plan:</b> ${d.diet.join(", ") || "no diet rules"} · ${d.allergens.length ? "never " + d.allergens.join(", ") : "no allergies"} · lunch ${d.lunchTime} · ₹${d.budget}/meal · ${favCount} favorite dish${favCount === 1 ? "" : "es"}.</div></div>
+      <div class="consents">
+        <label><input type="checkbox" id="c-parent" ${d.parentConsent ? "checked" : ""}> ${escapeHtml(d.parentName || "My parent")} has consented to receiving deliveries and WhatsApp updates from me through Annapurna.</label>
+        <label><input type="checkbox" id="c-terms" ${d.termsAcknowledged ? "checked" : ""}> I acknowledge the <b>Swiggy MCP Terms of Use</b> — orders and bookings are placed on my own Swiggy account, for personal use, with Swiggy branding preserved.</label>
+      </div>`;
+  }
+}
+
+async function loadDishOptions() {
+  const d = wiz.data;
+  try {
+    const res = await fetch("/api/dish-options", {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ diet: d.diet, allergens: d.allergens, softFoodOnly: d.softFoodOnly, budgetPerMealINR: d.budget, addressId: d.addressId }),
+    });
+    const data = await res.json();
+    wiz.dishGroups = data.groups;
+    const total = data.groups.reduce((n, g) => n + g.items.length, 0);
+    $("wizBody").innerHTML = `
+      <div class="count-note">${ic("i-shield",15,"color:var(--green)")} <b>${total} dishes</b> pass her profile across ${data.groups.length} kitchens — ${data.blockedCount} were filtered out by safety checks. Pick her favorites (the agent rotates within them):</div>
+      ${data.groups.map(g => `
+        <div class="dish-group">
+          <h3>${escapeHtml(g.restaurant.name)} <span class="via">via Swiggy · ${g.restaurant.rating}★</span></h3>
+          <div class="dish-list">${g.items.map(i => `
+            <button class="dish" data-v="${i.itemId}" aria-pressed="${d.favorites.includes(i.itemId)}">
+              <span class="veg-mark"></span>
+              <span><span class="dn">${escapeHtml(i.name)}</span><br/><span class="dp">₹${i.price}${i.tags.length ? " · " + i.tags.slice(0,2).join(", ") : ""}</span></span>
+              <span class="tick">${ic("i-check-circle",20)}</span>
+            </button>`).join("")}</div>
+        </div>`).join("")}`;
+    $("wizBody").querySelectorAll(".dish").forEach(x => x.onclick = () => {
+      chipToggle(d.favorites, x.dataset.v);
+      x.setAttribute("aria-pressed", d.favorites.includes(x.dataset.v));
+    });
+  } catch {
+    $("wizBody").innerHTML = `<div class="err">${ic("i-alert")}<div>Couldn't fetch dishes — is the mock Swiggy MCP running (<code>npm run mock</code>)?</div></div>`;
+  }
+}
+
+async function wizNext() {
+  const d = wiz.data, b = $("wizBody");
+  const flash = (msg) => { b.insertAdjacentHTML("afterbegin", `<div class="err" style="margin-bottom:14px">${ic("i-alert")}<div>${msg}</div></div>`); };
+  b.querySelectorAll(".err").forEach(e => e.remove());
+
+  if (wiz.step === 0) {
+    d.parentName = $("f-pname").value.trim(); d.language = $("f-lang").value; d.parentWa = $("f-pwa").value.trim();
+    d.addressId = $("f-addr").value; d.childName = $("f-cname").value.trim(); d.childWa = $("f-cwa").value.trim();
+    if (!d.parentName || !d.childName) return flash("Both names are needed.");
+    if (!/^\+?[0-9X]{8,15}$/.test(d.parentWa) || !/^\+?[0-9X]{8,15}$/.test(d.childWa)) return flash("WhatsApp numbers look invalid (use digits, e.g. +919876543210).");
+  }
+  if (wiz.step === 1) { d.notes = $("f-notes").value; }
+  if (wiz.step === 2) {
+    d.lunchTime = $("f-time").value || "13:00";
+    d.budget = Math.min(Math.max(Number($("f-budget").value) || 250, 50), 2000);
+  }
+  if (wiz.step === 3) { d.instructions = $("f-instr").value; d.fallbackContact = $("f-fallback").value; }
+  if (wiz.step === 4) {
+    if (!d.favorites.length) return flash("Pick at least one favorite dish.");
+  }
+  if (wiz.step === 5) {
+    d.parentConsent = $("c-parent").checked; d.termsAcknowledged = $("c-terms").checked;
+    if (!d.parentConsent || !d.termsAcknowledged) return flash("Both consents are required to continue.");
+    return saveWizard();
+  }
+  wiz.step++;
+  renderWizard();
+}
+
+async function saveWizard() {
+  const d = wiz.data;
+  const payload = {
+    id: (d.parentName || "parent").toLowerCase().replace(/[^a-z0-9]/g, "-") + "-delhi",
+    parent: { name: d.parentName, addressId: d.addressId, language: d.language, whatsapp: d.parentWa },
+    child: { name: d.childName, whatsapp: d.childWa },
+    health: { diet: d.diet, allergens: d.allergens, softFoodOnly: d.softFoodOnly, notes: d.notes },
+    schedule: { lunchTime: d.lunchTime, daysOff: d.daysOff, budgetPerMealINR: d.budget },
+    delivery: { fallbackContact: d.fallbackContact, instructions: d.instructions },
+    favorites: d.favorites,
+    consent: { parentConsent: true, termsAcknowledged: true },
+  };
+  const res = await fetch("/api/care-profile", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+  const data = await res.json();
+  if (!res.ok) return $("wizBody").insertAdjacentHTML("afterbegin", `<div class="err" style="margin-bottom:14px">${ic("i-alert")}<div>${(data.errors || ["Save failed"]).join("<br/>")}</div></div>`);
+  boot();
+}
+
+/* ======================= HOME ======================= */
+let currentProfile = null;
+
+function renderHome(p) {
+  currentProfile = p;
+  const chips = [
+    ...p.health.diet.map(x => `<span class="chip">${ic("i-leaf",13)} ${x.replace("-", " ")}</span>`),
+    ...p.health.allergens.map(x => `<span class="chip block">${ic("i-ban",13)} no ${x}</span>`),
+    ...(p.health.softFoodOnly ? [`<span class="chip">${ic("i-heart-pulse",13)} soft food</span>`] : []),
+  ].join("");
+  app.innerHTML = heroHtml(true) + `
+    <div class="home-grid">
+      <div class="card">
+        <div class="parent-head">
+          <div class="avatar">${escapeHtml(p.parent.name[0])}</div>
+          <div>
+            <div class="parent-name">${escapeHtml(p.parent.name)}</div>
+            <div class="addr">${ic("i-pin",14)} Delhi · speaks ${p.parent.language} · lunch ${p.schedule.lunchTime}</div>
+          </div>
+        </div>
+        <div class="chips" style="margin-top:13px">${chips}</div>
+        <div class="progress hidden" id="sendProgress" style="margin-top:14px"></div>
+      </div>
+
+      <div class="actions">
+        <button class="action-card" id="actFood">
+          <span class="ai">${ic("i-bowl",21)}</span>
+          <span class="at">Send lunch now</span>
+          <span class="ad">The agent picks from her favorites, safety-checked, paid by you</span>
+        </button>
+        <button class="action-card" id="actGrocery">
+          <span class="ai">${ic("i-basket",21)}</span>
+          <span class="at">Order groceries</span>
+          <span class="ad">Instamart staples to her door — atta, dal, fruit, milk</span>
+        </button>
+        <button class="action-card" id="actDineout">
+          <span class="ai">${ic("i-table",21)}</span>
+          <span class="at">Book a table</span>
+          <span class="ad">A senior-friendly restaurant near her, reservation in her name</span>
+        </button>
+      </div>
+
+      <div>
+        <div class="section-title">${ic("i-history",15)} Recent care</div>
+        <div class="history" id="historyList"><div class="skel" style="height:58px"></div></div>
+      </div>
+    </div>
+    <div id="modalRoot"></div>` + TERMS_FOOTER;
+  $("actFood").onclick = sendLunch;
+  $("actGrocery").onclick = openGrocery;
+  $("actDineout").onclick = openDineout;
+  loadHistory();
+}
+
+const SEND_STEPS = ["Finding restaurants near her", "Running safety & health checks", "Choosing from her favorites", "Placing the order — paid from your account"];
+
+async function sendLunch() {
+  const prog = $("sendProgress");
+  prog.classList.remove("hidden");
+  let step = 0;
+  const draw = () => prog.innerHTML = SEND_STEPS.map((s, i) => `
+    <div class="pstep ${i < step ? "done" : i === step ? "active" : ""}">
+      ${i < step ? ic("i-check",14,"color:var(--green)") : i === step ? '<span class="spinner dark"></span>' : ic("i-clock",14,"opacity:.35")} ${s}</div>`).join("");
+  draw();
+  const tick = setInterval(() => { if (step < SEND_STEPS.length - 1) { step++; draw(); } }, 700);
+  try {
+    const res = await fetch("/api/orders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ profileId: currentProfile.id }) });
+    const data = await res.json();
+    clearInterval(tick);
+    if (data.error) throw new Error(data.error);
+    step = SEND_STEPS.length; draw();
+    setTimeout(() => location.search = "?order=" + data.orderId, 400);
+  } catch (e) {
+    clearInterval(tick);
+    prog.innerHTML = `<div class="err">${ic("i-alert")}<div><b>Couldn't place the order.</b> ${escapeHtml(e.message)}</div></div>`;
+  }
+}
+
+/* ---------- Grocery modal ---------- */
+async function openGrocery() {
+  const root = $("modalRoot");
+  root.innerHTML = `<div class="modal-bg"><div class="modal"><h2>${ic("i-basket",20)} Groceries for ${escapeHtml(currentProfile.parent.name)}</h2><div class="row" style="justify-content:center;padding:14px"><span class="spinner dark"></span></div></div></div>`;
+  try {
+    const data = await (await fetch("/api/grocery/catalog")).json();
+    const selected = new Map();
+    const draw = () => {
+      const total = [...selected.keys()].reduce((n, id) => n + data.products.find(p => p.itemId === id).price * selected.get(id), 0);
+      root.querySelector(".modal").innerHTML = `
+        <h2>${ic("i-basket",20)} Groceries for ${escapeHtml(currentProfile.parent.name)}</h2>
+        <div class="tiny">${escapeHtml(data.store.name)} · via Swiggy Instamart MCP · delivered with her standing instructions</div>
+        <div style="display:grid;gap:8px">${data.products.map(pr => `
+          <button class="g-item" data-v="${pr.itemId}" aria-pressed="${selected.has(pr.itemId)}">
+            <span style="flex:1;text-align:left"><span class="gn">${escapeHtml(pr.name)}</span><br/><span class="gp">₹${pr.price} · ${pr.category}${pr.profileNote ? ` · <span class="g-note">${escapeHtml(pr.profileNote)}</span>` : ""}</span></span>
+            ${selected.has(pr.itemId) ? ic("i-check-circle",19,"color:var(--green)") : ""}
+          </button>`).join("")}</div>
+        <div class="g-total"><span>${selected.size} item${selected.size === 1 ? "" : "s"}</span><span>₹${total}</span></div>
+        <div class="row" style="justify-content:flex-end;gap:10px">
+          <button class="btn ghost" id="gCancel">Cancel</button>
+          <button class="btn primary" id="gPlace" ${selected.size ? "" : "disabled"}>${ic("i-send",16)} Send to her</button>
+        </div>`;
+      root.querySelectorAll(".g-item").forEach(x => x.onclick = () => {
+        const id = x.dataset.v;
+        if (selected.has(id)) selected.delete(id); else selected.set(id, 1);
+        draw();
+      });
+      root.querySelector("#gCancel").onclick = () => root.innerHTML = "";
+      root.querySelector("#gPlace").onclick = async () => {
+        root.querySelector("#gPlace").innerHTML = `<span class="spinner"></span> Placing…`;
+        const res = await fetch("/api/grocery/orders", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ items: [...selected.keys()].map(id => ({ itemId: id, qty: selected.get(id) })) }),
+        });
+        const d = await res.json();
+        if (d.error) { root.querySelector(".modal").insertAdjacentHTML("beforeend", `<div class="err">${ic("i-alert")}<div>${escapeHtml(d.error)}</div></div>`); return; }
+        location.search = "?order=" + d.orderId;
+      };
+    };
+    draw();
+  } catch {
+    root.querySelector(".modal").innerHTML += `<div class="err">${ic("i-alert")}<div>Couldn't load the Instamart catalog.</div></div>`;
+  }
+}
+
+/* ---------- Dineout modal ---------- */
+async function openDineout() {
+  const root = $("modalRoot");
+  root.innerHTML = `<div class="modal-bg"><div class="modal"><h2>${ic("i-table",20)} Book a table for ${escapeHtml(currentProfile.parent.name)}</h2><div class="row" style="justify-content:center;padding:14px"><span class="spinner dark"></span></div></div></div>`;
+  try {
+    const data = await (await fetch("/api/dineout/options")).json();
+    let venueId = data.venues[0].id, time = null;
+    const today = new Date(); today.setDate(today.getDate() + 1);
+    let date = today.toISOString().slice(0, 10);
+    let party = 2;
+    const draw = () => {
+      const venue = data.venues.find(v => v.id === venueId);
+      root.querySelector(".modal").innerHTML = `
+        <h2>${ic("i-table",20)} Book a table for ${escapeHtml(currentProfile.parent.name)}</h2>
+        <div class="tiny">Senior-friendly venues near her · via Swiggy Dineout MCP · booking in her name, no payment needed at booking</div>
+        <label class="fld">Restaurant<select id="doVenue">${data.venues.map(v => `<option value="${v.id}" ${v.id === venueId ? "selected" : ""}>${escapeHtml(v.name)} — ${escapeHtml(v.area)} (${v.rating}★)</option>`).join("")}</select></label>
+        <div class="grid2">
+          <label class="fld">Date<input type="date" id="doDate" value="${date}" min="${new Date().toISOString().slice(0,10)}"></label>
+          <label class="fld">Party size<input type="number" id="doParty" min="1" max="12" value="${party}"></label>
+        </div>
+        <div class="fld" style="font-size:13px;font-weight:600;color:var(--muted)">Time slot</div>
+        <div class="chips">${venue.slots.map(s => `<button class="slot" data-v="${s}" aria-pressed="${s === time}">${s}</button>`).join("")}</div>
+        <label class="fld">Note for the restaurant<input type="text" id="doNote" maxlength="160" placeholder="e.g. quiet corner table, she walks with a stick"></label>
+        <div class="row" style="justify-content:flex-end;gap:10px">
+          <button class="btn ghost" id="doCancel">Cancel</button>
+          <button class="btn primary" id="doBook" ${time ? "" : "disabled"}>${ic("i-check",16)} Book table</button>
+        </div>`;
+      root.querySelector("#doVenue").onchange = (e) => { venueId = e.target.value; time = null; draw(); };
+      root.querySelector("#doDate").onchange = (e) => { date = e.target.value; };
+      root.querySelector("#doParty").onchange = (e) => { party = e.target.value; };
+      root.querySelectorAll(".slot").forEach(x => x.onclick = () => { time = x.dataset.v; draw(); });
+      root.querySelector("#doCancel").onclick = () => root.innerHTML = "";
+      root.querySelector("#doBook").onclick = async () => {
+        root.querySelector("#doBook").innerHTML = `<span class="spinner"></span> Booking…`;
+        const res = await fetch("/api/dineout/book", {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ venueId, date, time, partySize: Number(party), note: root.querySelector("#doNote").value }),
+        });
+        const d = await res.json();
+        if (d.error) { root.querySelector(".modal").insertAdjacentHTML("beforeend", `<div class="err">${ic("i-alert")}<div>${escapeHtml(d.error)}</div></div>`); return; }
+        location.search = "?order=" + d.booking.bookingId;
+      };
+    };
+    draw();
+  } catch {
+    root.querySelector(".modal").innerHTML += `<div class="err">${ic("i-alert")}<div>Couldn't load Dineout venues.</div></div>`;
+  }
+}
+
+/* ---------- History ---------- */
+const KIND_ICON = { food: "i-bowl", grocery: "i-basket", booking: "i-table" };
+async function loadHistory() {
+  try {
+    const { orders } = await (await fetch("/api/orders")).json();
+    if (!orders.length) {
+      $("historyList").innerHTML = `<div class="card empty">${ic("i-heart-pulse",22,"color:var(--muted)")} Nothing sent yet — her first lunch, grocery run, or dinner out is one tap away.</div>`;
+      return;
+    }
+    $("historyList").innerHTML = orders.map(o => `
+      <a class="h-item" href="?order=${o.orderId}">
+        <span class="h-icon">${ic(KIND_ICON[o.kind] || "i-bowl",17)}</span>
+        <span>
+          <span class="h-dish">${escapeHtml(o.item)}</span><br/>
+          <span class="h-sub">${escapeHtml(o.restaurant)} · ${new Date(o.placedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}, ${fmtTime(o.placedAt)}</span>
+        </span>
+        <span class="h-amt">${o.kind === "booking" ? "booked" : "₹" + o.amountINR}</span>
+      </a>`).join("");
+  } catch {}
+}
+
+/* ======================= TRACKING ======================= */
+const STAGE_LABELS = { PLACED: "Placed", CONFIRMED: "Confirmed", PREPARING: "Preparing", PICKED_UP: "Picked up", ARRIVING: "Arriving", DELIVERED: "Delivered", PACKED: "Packed", OUT_FOR_DELIVERY: "On the way" };
+let map, riderMarker, msgCount = 0, parentName = "Mummy";
+
+async function renderTrack() {
+  app.innerHTML = `
+    <a class="back" href="./">${ic("i-back",15)} Back to home</a>
+    <div class="headline" id="headline"><span class="skel" style="display:inline-block;width:60%;height:26px"></span></div>
+    <div class="done-banner hidden" id="doneBanner">${ic("i-check-circle")}<div><b>Delivered and received</b><span id="doneSub" class="muted" style="display:block;font-size:13px"></span></div></div>
+    <div id="bookingView" class="hidden"></div>
+    <div id="orderView">
+      <div class="strip"><div class="timeline" id="timeline"></div></div>
+      <div class="track-grid">
+        <div class="col">
+          <div class="card">
+            <div class="dish-row">
+              <div class="row" style="align-items:flex-start">
+                <div class="veg-mark" id="vegMark"></div>
+                <div>
+                  <div class="dish-name" id="dishName">—</div>
+                  <div class="rest-line"><span id="restName">—</span><svg class="star" viewBox="0 0 24 24"><path d="M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z"/></svg><span id="restRating">—</span></div>
+                </div>
+              </div>
+              <div class="eta"><div class="big" id="etaBig">—</div><div class="lbl" id="etaLbl">estimated arrival</div></div>
+            </div>
+            <div class="why" id="whyBox">${ic("i-sparkle")}<div><b>Why this meal:</b> <span id="whyText">—</span></div></div>
+          </div>
+          <div class="card">
+            <div class="section-title" style="margin-bottom:12px">${ic("i-shield",15)} Safety checks</div>
+            <div class="safety" id="safetyList"></div>
+          </div>
+          <div class="card de-card hidden" id="deCard">
+            <div class="de-ava">${ic("i-bike",22)}</div>
+            <div><div class="de-name" id="deName">—</div><div class="de-sub" id="deSub">—</div></div>
+            <span class="badge">delivery partner</span>
+          </div>
+          <div class="card pay">
+            <div><div class="muted" style="font-size:12.5px">Paid from your account</div><div class="amt" id="payAmt">—</div></div>
+            <span class="badge" id="payBadge">—</span>
+          </div>
+        </div>
+        <div class="col">
+          <div id="map"><div class="map-fallback">Loading map…</div></div>
+          <div class="phone">
+            <div class="wa-head">
+              <div class="wa-ava" id="waAva">M</div>
+              <div><div class="wa-name" id="waName">Mummy</div><div class="wa-sub">what she's receiving, live</div></div>
+            </div>
+            <div class="wa-body" id="waBody"><div class="wa-empty">Messages to her phone will appear here.</div></div>
+          </div>
+        </div>
+      </div>
+    </div>` + TERMS_FOOTER;
+  try {
+    const p = await (await fetch("/api/profile/current")).json();
+    if (p.parent) { parentName = p.parent.name; $("waName").textContent = p.parent.name; $("waAva").textContent = p.parent.name[0]; }
+  } catch {}
+  await trackTick();
+  setInterval(trackTick, 3000);
+}
+
+function headlineFor(s, m, deName) {
+  const pn = parentName;
+  if (s.kind === "grocery") {
+    const map = {
+      PLACED: `Packing <span class="accent">${escapeHtml(m.item || "her groceries")}</span> for ${pn}…`,
+      PACKED: `Her groceries are <span class="accent">packed</span> at Instamart`,
+      OUT_FOR_DELIVERY: `<span class="accent">${escapeHtml(deName || "The delivery partner")}</span> is bringing her groceries`,
+      DELIVERED: `Delivered — <span class="accent">${pn} has her groceries</span>`,
+    };
+    return map[s.status] || map.PLACED;
+  }
+  const map = {
+    PLACED: `Sending <span class="accent">${escapeHtml(m.item || "lunch")}</span> to ${pn}…`,
+    CONFIRMED: `${escapeHtml(m.restaurant || "The kitchen")} has <span class="accent">confirmed</span> ${pn}'s lunch`,
+    PREPARING: `${escapeHtml(m.restaurant || "The kitchen")} is <span class="accent">preparing</span> ${pn}'s ${escapeHtml(m.item || "meal")}`,
+    PICKED_UP: `<span class="accent">${escapeHtml(deName || "The delivery partner")}</span> is on the way to ${pn}`,
+    ARRIVING: `<span class="accent">${escapeHtml(deName || "The delivery partner")}</span> is arriving at ${pn}'s door`,
+    DELIVERED: `Delivered — <span class="accent">${pn} has her lunch</span>`,
+  };
+  return map[s.status] || map.PLACED;
+}
+
+async function trackTick() {
+  let s;
+  try {
+    s = await (await fetch(`/api/orders/${orderId}`)).json();
+    if (s.error) throw new Error(s.error);
+  } catch (e) {
+    $("headline").innerHTML = `<div class="err">${ic("i-alert")}<div><b>Can't load this order.</b> ${escapeHtml(e.message || "Is the agent running?")}</div></div>`;
+    return;
+  }
+
+  // Booking confirmation view
+  if (s.kind === "booking") {
+    $("orderView").classList.add("hidden");
+    const b = s.meta.booking;
+    $("headline").innerHTML = `Table booked for <span class="accent">${parentName}</span> at ${escapeHtml(s.meta.restaurant)}`;
+    $("bookingView").classList.remove("hidden");
+    $("bookingView").innerHTML = `
+      <div class="card booking-card">
+        <div class="muted" style="font-size:12.5px">Booking ID — she just says this name at the door</div>
+        <div class="booking-big">${escapeHtml(b.bookingId)}</div>
+        <div>${escapeHtml(s.meta.restaurant)} · ${escapeHtml(b.area)}</div>
+        <div class="muted">${escapeHtml(b.date)} at ${escapeHtml(b.time)} · party of ${b.partySize} · no payment taken at booking</div>
+        <div class="why">${ic("i-check-circle")}<div>Confirmed on WhatsApp to both of you — hers in Hindi with the booking name, yours with the summary.</div></div>
+      </div>`;
+    renderMessages(s.messages || []);
+    return;
+  }
+
+  const m = s.meta || {};
+  const deName = s.deliveryPartner?.name;
+  $("headline").innerHTML = headlineFor(s, m, deName);
+
+  if (s.status === "DELIVERED") {
+    $("doneBanner").classList.remove("hidden");
+    const at = m.milestones?.DELIVERED;
+    $("doneSub").textContent = (at ? `Received at ${fmtTime(at)}. ` : "") + `Tomorrow the agent will ask ${parentName} how it was.`;
+  }
+
+  $("timeline").innerHTML = s.lifecycle.map((st, i) => {
+    const at = m.milestones?.[st];
+    return `<div class="stage ${i <= s.statusIndex ? "done" : ""}">${STAGE_LABELS[st] || st}<span class="ts">${at ? fmtTime(at) : "&nbsp;"}</span></div>`;
+  }).join("");
+
+  $("dishName").textContent = m.item || "—";
+  $("restName").textContent = s.restaurant?.name || m.restaurant || "—";
+  $("restRating").textContent = s.restaurant?.rating ?? "";
+  if (s.kind === "grocery") { $("whyBox").classList.add("hidden"); $("vegMark").style.visibility = "hidden"; }
+  else $("whyText").textContent = m.reason || "—";
+  renderEta(s, m);
+  renderSafety(s, m);
+
+  if (s.deliveryPartner) {
+    $("deCard").classList.remove("hidden");
+    $("deName").textContent = s.deliveryPartner.name;
+    $("deSub").textContent = `${s.deliveryPartner.phoneMasked} · ${s.deliveryPartner.vehicle}`;
+  }
+  $("payAmt").textContent = "₹" + (s.amount ?? m.amountINR ?? "—");
+  $("payBadge").textContent = s.payment?.status || "—";
+  renderMap(s);
+  renderMessages(s.messages || []);
+}
+
+function renderEta(s, m) {
+  const total = (s.lifecycle.length - 1) * (s.kind === "grocery" ? 15 : 20);
+  if (s.status === "DELIVERED") {
+    const at = m.milestones?.DELIVERED;
+    $("etaBig").textContent = at ? fmtTime(at) : "Delivered";
+    $("etaLbl").textContent = "delivered at";
+    return;
+  }
+  if (m.placedAt) {
+    const eta = m.placedAt + total * 1000;
+    const remain = Math.max(0, Math.round((eta - Date.now()) / 1000));
+    $("etaBig").textContent = fmtTime(eta);
+    $("etaLbl").textContent = remain > 0 ? `arriving in ~${Math.floor(remain / 60)}:${String(remain % 60).padStart(2, "0")}` : "arriving now";
+  }
+}
+
+function renderSafety(s, m) {
+  const items = [];
+  const restName = s.restaurant?.name || m.restaurant;
+  if (s.kind === "grocery") {
+    items.push(`<div class="s-item pass">${ic("i-shield")}<div><b>${escapeHtml(restName)}</b> — sealed items, delivered with her standing instructions</div></div>`);
+    items.push(`<div class="s-item pass">${ic("i-lock")}<div><b>No-OTP rule active</b> — she's reminded the delivery partner never asks for codes or money</div></div>`);
+  } else if (restName) {
+    items.push(`<div class="s-item pass">${ic("i-shield")}<div><b>${escapeHtml(restName)}</b> — rating ${s.restaurant?.rating ?? "4.2+"}, FSSAI licensed, hygiene audited</div></div>`);
+  }
+  for (const line of (m.guardAudit || [])) {
+    const [head, ...rest] = String(line).split(": ");
+    items.push(`<div class="s-item fail">${ic("i-x-shield")}<div><b>${escapeHtml(head)}</b> — ${escapeHtml(rest.join(": "))}</div></div>`);
+  }
+  $("safetyList").innerHTML = items.join("") || `<div class="muted" style="font-size:13px">No checks recorded for this order.</div>`;
+}
+
+function renderMap(s) {
+  const dest = s.destination, origin = s.origin || s.restaurant;
+  if (!window.L || !dest?.lat) {
+    $("map").innerHTML = `<div class="map-fallback">Live map unavailable — tracking continues above.</div>`;
+    return;
+  }
+  if (!map) {
+    map = L.map("map", { zoomControl: false });
+    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19, attribution: "© OpenStreetMap" }).addTo(map);
+    L.circleMarker([dest.lat, dest.lng], { radius: 8, color: "#2f7a4d", fillColor: "#2f7a4d", fillOpacity: 1 }).addTo(map).bindTooltip(`${parentName}'s home`, { permanent: true, direction: "top", offset: [0, -8] });
+    if (origin?.lat) {
+      L.circleMarker([origin.lat, origin.lng], { radius: 7, color: "#22271f", fillColor: "#22271f", fillOpacity: .9 }).addTo(map).bindTooltip(origin.name || "pickup", { direction: "top" });
+      map.fitBounds(L.latLngBounds([dest.lat, dest.lng], [origin.lat, origin.lng]).pad(0.25));
+    } else map.setView([dest.lat, dest.lng], 14);
+  }
+  if (s.riderLocation) {
+    if (!riderMarker) riderMarker = L.circleMarker([s.riderLocation.lat, s.riderLocation.lng], { radius: 9, color: "#fff", weight: 2.5, fillColor: "#2f7a4d", fillOpacity: 1 }).addTo(map).bindTooltip("Delivery partner", { direction: "top" });
+    else riderMarker.setLatLng([s.riderLocation.lat, s.riderLocation.lng]);
+  }
+}
+
+function renderMessages(messages) {
+  const parentMsgs = messages.filter(x => x.side === "parent");
+  if (!parentMsgs.length || parentMsgs.length === msgCount) return;
+  msgCount = parentMsgs.length;
+  const body = $("waBody");
+  if (!body) return;
+  body.innerHTML = parentMsgs.map(x => `<div class="bubble">${escapeHtml(x.text)}<span class="wa-ts">${fmtTime(x.at)}</span></div>`).join("");
+  body.scrollTop = body.scrollHeight;
+}
+
+boot();
+</script>
+</body>
+</html>
